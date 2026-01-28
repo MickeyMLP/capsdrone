@@ -16,3 +16,4 @@ lxml==6.0.2
 
 # --- Vision (Pi-safe) ---
 pillow==11.3.0
+opencv-python==4.12.0.88

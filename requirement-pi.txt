@@ -1,0 +1,18 @@
+# --- Core ---
+numpy==2.0.2
+future==1.0.0
+six==1.17.0
+packaging==25.0
+
+# --- MAVLink / Drone ---
+dronekit==2.9.2
+pymavlink==2.4.49
+MAVProxy==1.8.74
+monotonic==1.6
+pyserial==3.5
+fastcrc==0.3.4
+pynmeagps==1.0.54
+lxml==6.0.2
+
+# --- Vision (Pi-safe) ---
+pillow==11.3.0

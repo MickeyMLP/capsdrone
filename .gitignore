@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environments
+venv/
+drone-env/
+.env
+.conda/
+
+# Vision artifacts
+vision/model/*.pt
+vision/model/*.onnx
+vision/model/*.h5
+vision/model/*.engine
+
+# Logs & data
+*.log
+*.csv
+*.mp4
+
+# OS
+.DS_Store

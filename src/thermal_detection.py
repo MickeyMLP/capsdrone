@@ -396,11 +396,11 @@ class ThermalDetector:
 
 # Test function
 if __name__ == "__main__":
+    import sys
+    
     print("="*60)
     print("🌡️  Thermal Detection System")
     print("="*60)
-    print("Testing Thermal Detector")
-    print("Note: This will use your webcam as a simulated thermal camera")
     
     config = {
         'enabled': True,
@@ -412,15 +412,20 @@ if __name__ == "__main__":
     
     # Initialize camera (use 0 for default webcam)
     if detector.init_camera(0):
-        print("\nStarting detection...")
-        print("Available modes:")
-        print("  1. heat - Detect all heat sources")
-        print("  2. person - Detect people")
-        print("  3. fire - Detect fire")
-        
-        mode = input("\nSelect mode (heat/person/fire): ").strip().lower()
-        if mode not in ['heat', 'person', 'fire']:
-            mode = 'heat'
+        # Check if mode was passed from launcher
+        if len(sys.argv) > 1:
+            mode = sys.argv[1]  # Get mode from command line
+            print(f"Starting in {mode} mode (from launcher)")
+        else:
+            # Interactive mode - ask user
+            print("\nAvailable modes:")
+            print("  1. heat - Detect all heat sources")
+            print("  2. person - Detect people")
+            print("  3. fire - Detect fire")
+            
+            mode = input("\nSelect mode (heat/person/fire): ").strip().lower()
+            if mode not in ['heat', 'person', 'fire']:
+                mode = 'heat'
         
         try:
             detector.run_detection(mode=mode)

@@ -529,6 +529,8 @@ class DroneObjectDetector:
 
 # Test function
 if __name__ == "__main__":
+    import sys
+    
     print("="*60)
     print("🎯 Drone Object Detection System")
     print("="*60)
@@ -536,22 +538,28 @@ if __name__ == "__main__":
     detector = DroneObjectDetector()
     
     if detector.init_camera(0):
-        print("\nSelect detection mode:")
-        print("  1 - Person detection (search & rescue, follow-me)")
-        print("  2 - Obstacle detection (collision avoidance)")
-        print("  3 - Landing pad detection (auto-landing)")
-        print("  4 - Color target tracking")
-        
-        choice = input("\nEnter choice (1-4): ").strip()
-        
-        mode_map = {
-            '1': 'person',
-            '2': 'obstacle',
-            '3': 'landing_pad',
-            '4': 'target'
-        }
-        
-        mode = mode_map.get(choice, 'person')
+        # Check if mode was passed from launcher
+        if len(sys.argv) > 1:
+            mode = sys.argv[1]  # Get mode from command line
+            print(f"Starting in {mode} mode (from launcher)")
+        else:
+            # Interactive mode - ask user
+            print("\nSelect detection mode:")
+            print("  1 - Person detection")
+            print("  2 - Obstacle detection")
+            print("  3 - Landing pad detection")
+            print("  4 - Color target tracking")
+            
+            choice = input("\nEnter choice (1-4): ").strip()
+            
+            mode_map = {
+                '1': 'person',
+                '2': 'obstacle',
+                '3': 'landing_pad',
+                '4': 'target'
+            }
+            
+            mode = mode_map.get(choice, 'person')
         
         try:
             detector.run_detection(mode=mode)

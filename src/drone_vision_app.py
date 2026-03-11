@@ -295,49 +295,78 @@ class ThermalCameraDetector:
                     pixel_val = int(gray[center[1], center[0]])
                     warmth = int((pixel_val - frame_min) / frame_range * 100)
                     detections.append({"bbox": (x, y, w, h),
-                                       "label": f"HUMAN {warmth}% warm",
+                                       "label": f"HUMAN {warmth}%",
                                        "color": (0, 255, 80),
                                        "center": center})
         return detections
 
     def detect_fire(self, gray, colored):
-        """Detect fire: very high temperature >60C equivalent"""
-        threshold = int(60 * 2.55)
+        """
+        Detect fire: only the ABSOLUTE hottest pixels (top 5% brightness).
+        Humans are ~37C surface temp. Fire is 200C+.
+        In a frame with humans only, fire threshold will NOT be triggered
+        because we require pixels significantly brighter than the human range.
+        We use percentile to find truly extreme heat only.
+        """
+        frame_min = int(np.min(gray))
+        frame_max = int(np.max(gray))
+        frame_range = frame_max - frame_min if frame_max > frame_min else 1
+
+        # Only top 5% brightness = extreme heat = fire
+        # Also require the max pixel to be significantly bright (>180)
+        # to avoid triggering when only humans are in frame
+        if frame_max < 180:
+            # No extreme heat source present at all
+            return []
+
+        threshold = frame_min + int(frame_range * 0.95)
         _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
         kernel = np.ones((3, 3), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        detections = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 100:
+                x, y, w, h = cv2.boundingRect(contour)
+                center = (x+w//2, y+h//2)
+                intensity = int((int(gray[center[1], center[0]]) - frame_min) / frame_range * 100)
+                detections.append({"bbox": (x, y, w, h),
+                                   "label": f"FIRE {intensity}%",
+                                   "color": (0, 0, 255),
+                                   "center": center})
+        return detections
+
+    def detect_hot(self, gray, colored):
+        """
+        Detect any noticeably hot object - warmer than ambient/background.
+        Uses top 25% brightness of frame to find warm anomalies.
+        """
+        frame_min = int(np.min(gray))
+        frame_max = int(np.max(gray))
+        frame_range = frame_max - frame_min if frame_max > frame_min else 1
+
+        # Top 25% brightness = noticeably warm objects
+        threshold = frame_min + int(frame_range * 0.75)
+        _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
+        kernel = np.ones((4, 4), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         detections = []
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area > 30:
+            if area > 200:
                 x, y, w, h = cv2.boundingRect(contour)
                 center = (x+w//2, y+h//2)
-                temp_val = int(gray[center[1], center[0]] / 2.55)
-                detections.append({'bbox': (x, y, w, h),
-                                   'label': f'🔥 FIRE ~{temp_val}C',
-                                   'color': (0, 0, 255),
-                                   'center': center})
-        return detections
-
-    def detect_hot(self, gray, colored):
-        """Detect any hot object >35C"""
-        threshold = int(35 * 2.55)
-        _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-        kernel = np.ones((3, 3), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        detections = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > 50:
-                x, y, w, h = cv2.boundingRect(contour)
-                center = (x+w//2, y+h//2)
-                temp_val = int(gray[center[1], center[0]] / 2.55)
-                detections.append({'bbox': (x, y, w, h),
-                                   'label': f'HOT ~{temp_val}C',
+                warmth = int((int(gray[center[1], center[0]]) - frame_min) / frame_range * 100)
+                detections.append({"bbox": (x, y, w, h),
+                                   "label": f"HOT OBJ {warmth}%",
                                    'color': (0, 165, 255),
                                    'center': center})
         return detections

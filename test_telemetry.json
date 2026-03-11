@@ -1,0 +1,157 @@
+[
+  {
+    "timestamp": "2026-01-28T14:56:50.973796",
+    "gps": {
+      "lat": 13.7563,
+      "lon": 100.5018,
+      "alt": 5.0
+    },
+    "battery": {
+      "voltage": 12.6,
+      "current": 15.0,
+      "level": 80
+    },
+    "attitude": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 90.0
+    },
+    "velocity": {
+      "vx": 0,
+      "vy": 0,
+      "vz": 0,
+      "groundspeed": 0,
+      "airspeed": 0
+    },
+    "status": {
+      "mode": "GUIDED",
+      "armed": false,
+      "armable": true,
+      "ekf_ok": true
+    }
+  },
+  {
+    "timestamp": "2026-01-28T14:56:51.992604",
+    "gps": {
+      "lat": 13.7563,
+      "lon": 100.5018,
+      "alt": 5.0
+    },
+    "battery": {
+      "voltage": 12.6,
+      "current": 15.0,
+      "level": 80
+    },
+    "attitude": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 90.0
+    },
+    "velocity": {
+      "vx": 0,
+      "vy": 0,
+      "vz": 0,
+      "groundspeed": 0,
+      "airspeed": 0
+    },
+    "status": {
+      "mode": "GUIDED",
+      "armed": false,
+      "armable": true,
+      "ekf_ok": true
+    }
+  },
+  {
+    "timestamp": "2026-01-28T14:56:52.996234",
+    "gps": {
+      "lat": 13.7563,
+      "lon": 100.5018,
+      "alt": 5.0
+    },
+    "battery": {
+      "voltage": 12.6,
+      "current": 15.0,
+      "level": 80
+    },
+    "attitude": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 90.0
+    },
+    "velocity": {
+      "vx": 0,
+      "vy": 0,
+      "vz": 0,
+      "groundspeed": 0,
+      "airspeed": 0
+    },
+    "status": {
+      "mode": "GUIDED",
+      "armed": false,
+      "armable": true,
+      "ekf_ok": true
+    }
+  },
+  {
+    "timestamp": "2026-01-28T14:56:53.996977",
+    "gps": {
+      "lat": 13.7563,
+      "lon": 100.5018,
+      "alt": 5.0
+    },
+    "battery": {
+      "voltage": 12.6,
+      "current": 15.0,
+      "level": 80
+    },
+    "attitude": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 90.0
+    },
+    "velocity": {
+      "vx": 0,
+      "vy": 0,
+      "vz": 0,
+      "groundspeed": 0,
+      "airspeed": 0
+    },
+    "status": {
+      "mode": "GUIDED",
+      "armed": false,
+      "armable": true,
+      "ekf_ok": true
+    }
+  },
+  {
+    "timestamp": "2026-01-28T14:56:55.008533",
+    "gps": {
+      "lat": 13.7563,
+      "lon": 100.5018,
+      "alt": 5.0
+    },
+    "battery": {
+      "voltage": 12.6,
+      "current": 15.0,
+      "level": 80
+    },
+    "attitude": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 90.0
+    },
+    "velocity": {
+      "vx": 0,
+      "vy": 0,
+      "vz": 0,
+      "groundspeed": 0,
+      "airspeed": 0
+    },
+    "status": {
+      "mode": "GUIDED",
+      "armed": false,
+      "armable": true,
+      "ekf_ok": true
+    }
+  }
+]

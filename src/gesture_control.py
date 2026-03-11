@@ -228,7 +228,7 @@ class GestureDetector:
             else:
                 hold = now - self.gesture_hold_start
                 cooldown_ok = (now - self.last_trigger_time) > self.cooldown
-                if hold >= self.gesture_hold_required and cooldown_ok and gesture not in ['NONE', 'OPEN_CENTER']:
+                if hold >= self.gesture_hold_required and cooldown_ok and gesture not in ['NONE']:
                     self._execute(gesture, drone)
                     self.last_trigger_time = now
                     command_triggered = True
@@ -241,26 +241,20 @@ class GestureDetector:
     def _execute(self, gesture, drone):
         print(f"[GESTURE] {gesture}")
         if gesture == 'HAND_UP':     drone.fly_up()
-        elif gesture == 'HAND_DOWN': drone.fly_down()
+        elif gesture == 'FIST':      drone.fly_down()
         elif gesture == 'HAND_LEFT': drone.move_left()
         elif gesture == 'HAND_RIGHT':drone.move_right()
-        elif gesture == 'FIST':      drone.hover()
+        elif gesture == 'HOVER':     drone.hover()
 
     def _draw_overlay(self, frame, gesture, fingers, wrist_x, wrist_y, triggered, drone):
         h, w = frame.shape[:2]
         overlay = frame.copy()
 
-        cv2.rectangle(overlay, (0, 0), (w, int(h*0.35)), (0, 200, 0), -1)
-        cv2.rectangle(overlay, (0, int(h*0.65)), (w, h), (0, 0, 200), -1)
-        cv2.rectangle(overlay, (0, int(h*0.35)), (int(w*0.30), int(h*0.65)), (0, 120, 255), -1)
-        cv2.rectangle(overlay, (int(w*0.70), int(h*0.35)), (w, int(h*0.65)), (180, 0, 255), -1)
-        frame = cv2.addWeighted(overlay, 0.13, frame, 0.87, 0)
+        # No zone overlay needed for finger-count mode
 
-        cv2.putText(frame, "FLY UP",    (w//2-40, 30),   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,80), 2)
-        cv2.putText(frame, "FLY DOWN",  (w//2-55, h-15), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (60,60,255), 2)
-        cv2.putText(frame, "LEFT",      (8, h//2),        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,160,255), 2)
-        cv2.putText(frame, "RIGHT",     (w-70, h//2),     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200,0,255), 2)
-        cv2.putText(frame, "FIST=HOVER",(w//2-65, h//2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200,200,200), 1)
+        # No zone labels needed - finger count based
+        cv2.putText(frame, "5=UP  0=DOWN  2=LEFT  1=RIGHT  3/4=HOVER",
+                   (8, h-15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200,200,200), 1)
 
         g_colors = {
             'HAND_UP':(0,255,80),'HAND_DOWN':(60,60,255),
@@ -410,11 +404,11 @@ def index():
     <div class="card">
       <div class="card-title">// GESTURE REFERENCE</div>
       <div class="gesture-list">
-        <div class="gesture-item" id="g-HAND_UP"><div class="gesture-dot"></div><span class="gesture-name">OPEN HAND — TOP ZONE</span><span class="gesture-cmd">FLY UP</span></div>
-        <div class="gesture-item" id="g-HAND_DOWN"><div class="gesture-dot"></div><span class="gesture-name">OPEN HAND — BOTTOM</span><span class="gesture-cmd">FLY DOWN</span></div>
-        <div class="gesture-item" id="g-HAND_LEFT"><div class="gesture-dot"></div><span class="gesture-name">OPEN HAND — LEFT</span><span class="gesture-cmd">MOVE LEFT</span></div>
-        <div class="gesture-item" id="g-HAND_RIGHT"><div class="gesture-dot"></div><span class="gesture-name">OPEN HAND — RIGHT</span><span class="gesture-cmd">MOVE RIGHT</span></div>
-        <div class="gesture-item" id="g-FIST"><div class="gesture-dot"></div><span class="gesture-name">FIST — ANY ZONE</span><span class="gesture-cmd">HOVER</span></div>
+        <div class="gesture-item" id="g-HAND_UP"><div class="gesture-dot"></div><span class="gesture-name">5 FINGERS</span><span class="gesture-cmd">FLY UP</span></div>
+        <div class="gesture-item" id="g-HAND_DOWN"><div class="gesture-dot"></div><span class="gesture-name">FIST (0 fingers)</span><span class="gesture-cmd">FLY DOWN</span></div>
+        <div class="gesture-item" id="g-HAND_LEFT"><div class="gesture-dot"></div><span class="gesture-name">2 FINGERS</span><span class="gesture-cmd">MOVE LEFT</span></div>
+        <div class="gesture-item" id="g-HAND_RIGHT"><div class="gesture-dot"></div><span class="gesture-name">1 FINGER</span><span class="gesture-cmd">MOVE RIGHT</span></div>
+        <div class="gesture-item" id="g-FIST"><div class="gesture-dot"></div><span class="gesture-name">3 or 4 FINGERS</span><span class="gesture-cmd">HOVER</span></div>
       </div>
     </div>
     <div class="card">

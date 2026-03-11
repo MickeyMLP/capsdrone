@@ -302,25 +302,16 @@ class ThermalCameraDetector:
 
     def detect_fire(self, gray, colored):
         """
-        Detect fire: only the ABSOLUTE hottest pixels (top 5% brightness).
-        Humans are ~37C surface temp. Fire is 200C+.
-        In a frame with humans only, fire threshold will NOT be triggered
-        because we require pixels significantly brighter than the human range.
-        We use percentile to find truly extreme heat only.
+        Detect fire using ABSOLUTE pixel threshold (not relative).
+        Fire in thermal = white/yellow = pixel value > 220 (out of 255).
+        Warm objects like windows, equipment = orange/red = pixel 130-200.
+        Humans = pixel ~100-160.
+        By requiring pixel > 220 we ONLY catch truly extreme heat sources.
         """
-        frame_min = int(np.min(gray))
-        frame_max = int(np.max(gray))
-        frame_range = frame_max - frame_min if frame_max > frame_min else 1
+        # Hard absolute threshold - only near-white pixels = real fire
+        FIRE_THRESHOLD = 220
 
-        # Only top 5% brightness = extreme heat = fire
-        # Also require the max pixel to be significantly bright (>180)
-        # to avoid triggering when only humans are in frame
-        if frame_max < 180:
-            # No extreme heat source present at all
-            return []
-
-        threshold = frame_min + int(frame_range * 0.95)
-        _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(gray, FIRE_THRESHOLD, 255, cv2.THRESH_BINARY)
 
         kernel = np.ones((3, 3), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -330,12 +321,12 @@ class ThermalCameraDetector:
         detections = []
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area > 100:
+            if area > 80:
                 x, y, w, h = cv2.boundingRect(contour)
                 center = (x+w//2, y+h//2)
-                intensity = int((int(gray[center[1], center[0]]) - frame_min) / frame_range * 100)
+                pixel_val = int(gray[center[1], center[0]])
                 detections.append({"bbox": (x, y, w, h),
-                                   "label": f"FIRE {intensity}%",
+                                   "label": f"FIRE px:{pixel_val}",
                                    "color": (0, 0, 255),
                                    "center": center})
         return detections
@@ -772,10 +763,10 @@ def index():
     <div class="controls">
       <div class="controls-label">// DETECTION MODE</div>
       <div class="btn-group">
-        <button class="btn active" onclick="setMode('regular','person',this)">👤 Person</button>
-        <button class="btn" onclick="setMode('regular','obstacle',this)">⚠ Obstacle</button>
-        <button class="btn" onclick="setMode('regular','landing_pad',this)">🎯 Landing</button>
-        <button class="btn" onclick="setMode('regular','target',this)">🔴 Target</button>
+        <button class="btn active" onclick="setMode('regular','person',this)">PERSON</button>
+        <button class="btn" onclick="setMode('regular','obstacle',this)">OBSTACLE</button>
+        <button class="btn" onclick="setMode('regular','landing_pad',this)">LANDING</button>
+        <button class="btn" onclick="setMode('regular','target',this)">TARGET</button>
       </div>
     </div>
   </div>
@@ -801,9 +792,9 @@ def index():
     <div class="controls">
       <div class="controls-label">// DETECTION MODE</div>
       <div class="btn-group">
-        <button class="btn active" onclick="setMode('thermal','human',this)">🧍 Human</button>
-        <button class="btn" onclick="setMode('thermal','fire',this)">🔥 Fire</button>
-        <button class="btn" onclick="setMode('thermal','hot',this)">♨ Hot Object</button>
+        <button class="btn active" onclick="setMode('thermal','human',this)">HUMAN</button>
+        <button class="btn" onclick="setMode('thermal','fire',this)">FIRE</button>
+        <button class="btn" onclick="setMode('thermal','hot',this)">HOT OBJECT</button>
       </div>
     </div>
   </div>

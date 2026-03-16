@@ -80,8 +80,13 @@ class DroneController:
         self.altitude = max(self.altitude - 0.5, 0.0)
         self._log("FLY DOWN")
 
-    def hover(self):
-        self._log("HOVER")
+    def move_forward(self):
+        self.position_x += 0.5
+        self._log("MOVE FORWARD")
+
+    def move_backward(self):
+        self.position_x -= 0.5
+        self._log("MOVE BACKWARD")
 
     def land(self):
         self.altitude = 0.0
@@ -103,7 +108,8 @@ class DroneController:
             'mode': self.mode,
             'armed': self.armed,
             'altitude': round(self.altitude, 2),
-            'last_command': self.last_command
+            'last_command': self.last_command,
+            'position_x': round(self.position_x, 2)
         }
 
 
@@ -350,9 +356,10 @@ class HandLandmarkDetector:
 
     def _execute(self, gesture, drone):
         print(f"[GESTURE] {gesture}")
-        if gesture == 'OPEN_HAND': drone.fly_up()
-        elif gesture == 'FIST':    drone.fly_down()
-        elif gesture == 'PEACE':   drone.hover()
+        if gesture == 'OPEN_HAND':  drone.fly_up()
+        elif gesture == 'FIST':     drone.fly_down()
+        elif gesture == 'FORWARD':  drone.move_forward()
+        elif gesture == 'BACKWARD': drone.move_backward()
 
     def _draw_overlay(self, frame, gesture, fingers, triggered, drone):
         h, w = frame.shape[:2]
@@ -372,7 +379,7 @@ class HandLandmarkDetector:
                    (w - 320, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (180, 180, 180), 1)
 
         cv2.rectangle(frame, (0, h - 36), (w, h), (0, 0, 0), -1)
-        cv2.putText(frame, "OPEN HAND=UP    FIST=DOWN    PEACE(2 fingers)=HOVER",
+        cv2.putText(frame, "OPEN=UP  FIST=DOWN  2 FINGERS=FORWARD  1 FINGER=BACKWARD",
                    (8, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (160, 160, 160), 1)
 
         now = time.time()
@@ -521,7 +528,8 @@ def index():
       <div class="gcards">
         <div class="gcard" id="g-OPEN_HAND"><div class="dot"></div><span class="gname">OPEN HAND (5 fingers)</span><span class="gcmd">FLY UP</span></div>
         <div class="gcard" id="g-FIST"><div class="dot"></div><span class="gname">FIST (0 fingers)</span><span class="gcmd">FLY DOWN</span></div>
-        <div class="gcard" id="g-PEACE"><div class="dot"></div><span class="gname">PEACE (2 fingers)</span><span class="gcmd">HOVER</span></div>
+        <div class="gcard" id="g-FORWARD"><div class="dot"></div><span class="gname">PEACE (2 fingers)</span><span class="gcmd">FORWARD</span></div>
+        <div class="gcard" id="g-BACKWARD"><div class="dot"></div><span class="gname">1 FINGER</span><span class="gcmd">BACKWARD</span></div>
       </div>
     </div>
     <div class="card">
@@ -543,7 +551,7 @@ setInterval(()=>{
     const mb = document.getElementById('model-badge');
     mb.textContent = d.model_ok ? 'TFLITE OK' : 'MODEL ERROR';
     mb.className = 'badge ' + (d.model_ok ? 'ok' : 'err');
-    ['OPEN_HAND','FIST','PEACE'].forEach(g=>{
+    ['OPEN_HAND','FIST','FORWARD','BACKWARD'].forEach(g=>{
       const el = document.getElementById('g-'+g);
       if(el) el.classList.toggle('active', d.gesture===g);
     });

@@ -402,11 +402,16 @@ class RegularDetector:
         self.upper_body = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
 
     def process_frame(self):
-        cap = cam_mgr.get(0, 640, 480)
-        ret, frame = cap.read()
-        if not ret:
+        try:
+            cap = cam_mgr.get(0, 640, 480)
+            ret, frame = cap.read()
+            if not ret:
+                cam_mgr.release_all()
+                return None
+            frame = cv2.flip(frame, 1)
+        except Exception as e:
+            print(f"Gesture cam error: {e}")
             return None
-        frame = cv2.flip(frame, 1)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         gray_eq = clahe.apply(gray)
@@ -624,11 +629,16 @@ class GestureDetector:
         return frame
 
     def process_frame(self):
-        cap = cam_mgr.get(0, 640, 480)
-        ret, frame = cap.read()
-        if not ret:
+        try:
+            cap = cam_mgr.get(0, 640, 480)
+            ret, frame = cap.read()
+            if not ret:
+                cam_mgr.release_all()
+                return None
+            frame = cv2.flip(frame, 1)
+        except Exception as e:
+            print(f"Gesture cam error: {e}")
             return None
-        frame = cv2.flip(frame, 1)
         gesture = "NONE"; fingers = 0; command_triggered = False
 
         if self.palm_interpreter and self.landmark_interpreter:
@@ -742,6 +752,8 @@ def set_mode():
     data = request.get_json()
     mode = data.get("mode", "thermal")
     if mode in ["thermal", "regular", "gesture"]:
+        # Release all cameras before switching so new mode can grab them
+        cam_mgr.release_all()
         active_mode = mode
     return jsonify({"mode": active_mode})
 

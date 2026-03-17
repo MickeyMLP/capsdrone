@@ -59,56 +59,195 @@ FINGER_COLORS = [(255,100,100),(100,255,100),(100,150,255),(255,255,100),(255,10
 
 
 # ════════════════════════════════════════════
-# DRONE CONTROLLER (Simulation)
+# DRONE CONTROLLER (Real Pixhawk + Simulation)
 # ════════════════════════════════════════════
+
+# Set SIMULATION = False to use real Pixhawk
+SIMULATION = False
+SERIAL_PORT = "/dev/ttyS0"
+BAUD_RATE = 57600
+
+# Try importing dronekit
+DRONEKIT_OK = False
+try:
+    from dronekit import connect, VehicleMode, LocationGlobalRelative
+    from pymavlink import mavutil
+    DRONEKIT_OK = True
+    print("DroneKit: OK")
+except ImportError:
+    print("DroneKit: not installed")
 
 class DroneController:
     def __init__(self):
-        self.altitude = 1.5
-        self.mode = "GUIDED"
-        self.armed = True
+        self.vehicle = None
+        self.connected = False
+        self.simulation = SIMULATION
         self.last_command = "NONE"
-        self.position_x = 0.0
+        self.connect_error = ""
+
+        # Simulation state
+        self._sim_altitude = 0.0
+        self._sim_position_x = 0.0
+        self._sim_mode = "STABILIZE"
+        self._sim_armed = False
+
+        if not self.simulation:
+            self._connect()
+        else:
+            print("Drone: SIMULATION MODE")
+
+    def _connect(self):
+        if not DRONEKIT_OK:
+            print("DroneKit not installed! Falling back to simulation.")
+            self.simulation = True
+            return
+        try:
+            print(f"Connecting to Pixhawk on {SERIAL_PORT}...")
+            self.vehicle = connect(SERIAL_PORT, baud=BAUD_RATE, wait_ready=True, timeout=30)
+            self.connected = True
+            print(f"Pixhawk connected! Firmware: {self.vehicle.version}")
+        except Exception as e:
+            self.connect_error = str(e)
+            print(f"Pixhawk connection failed: {e}")
+            print("Falling back to simulation mode")
+            self.simulation = True
+
+    def _send_velocity(self, vx, vy, vz, duration=0.5):
+        """Send velocity command to Pixhawk (NED frame, negative vz = up)"""
+        if not self.vehicle:
+            return
+        msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
+            0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            0b0000111111000111,  # velocity only
+            0, 0, 0,
+            vx, vy, vz,
+            0, 0, 0,
+            0, 0
+        )
+        self.vehicle.send_mavlink(msg)
+
+    def arm_and_takeoff(self, target_altitude=1.5):
+        """Arm and takeoff to target altitude in meters"""
+        if self.simulation:
+            self._sim_armed = True
+            self._sim_mode = "GUIDED"
+            self._sim_altitude = target_altitude
+            self._log("TAKEOFF")
+            return
+        try:
+            print("Arming motors...")
+            self.vehicle.mode = VehicleMode("GUIDED")
+            self.vehicle.armed = True
+            while not self.vehicle.armed:
+                time.sleep(0.5)
+            print(f"Taking off to {target_altitude}m...")
+            self.vehicle.simple_takeoff(target_altitude)
+            while True:
+                alt = self.vehicle.location.global_relative_frame.alt
+                print(f"Altitude: {alt:.1f}m")
+                if alt >= target_altitude * 0.95:
+                    print("Reached target altitude")
+                    break
+                time.sleep(0.5)
+            self._log("TAKEOFF")
+        except Exception as e:
+            print(f"Takeoff error: {e}")
 
     def fly_up(self):
-        self.altitude = min(self.altitude + 0.5, 10.0)
         self._log("FLY UP")
+        if self.simulation:
+            self._sim_altitude = min(self._sim_altitude + 0.5, 10.0)
+            return
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self._send_velocity(0, 0, -0.5)  # negative vz = up
 
     def fly_down(self):
-        self.altitude = max(self.altitude - 0.5, 0.0)
         self._log("FLY DOWN")
+        if self.simulation:
+            self._sim_altitude = max(self._sim_altitude - 0.5, 0.0)
+            return
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self._send_velocity(0, 0, 0.5)   # positive vz = down
 
     def move_forward(self):
-        self.position_x += 0.5
         self._log("MOVE FORWARD")
+        if self.simulation:
+            self._sim_position_x += 0.5
+            return
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self._send_velocity(0.5, 0, 0)   # positive vx = forward
 
     def move_backward(self):
-        self.position_x -= 0.5
         self._log("MOVE BACKWARD")
+        if self.simulation:
+            self._sim_position_x -= 0.5
+            return
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self._send_velocity(-0.5, 0, 0)  # negative vx = backward
+
+    def hover(self):
+        self._log("HOVER")
+        if self.simulation:
+            return
+        self._send_velocity(0, 0, 0)
 
     def land(self):
-        self.altitude = 0.0
-        self.mode = "LANDED"
         self._log("LAND")
+        if self.simulation:
+            self._sim_altitude = 0.0
+            self._sim_mode = "LANDED"
+            self._sim_armed = False
+            return
+        try:
+            self.vehicle.mode = VehicleMode("LAND")
+        except Exception as e:
+            print(f"Land error: {e}")
 
     def takeoff(self):
-        self.altitude = 1.5
-        self.mode = "GUIDED"
-        self.armed = True
-        self._log("TAKEOFF")
+        self.arm_and_takeoff(1.5)
 
     def _log(self, cmd):
         self.last_command = cmd
         print(f"[{datetime.now().strftime('%H:%M:%S')}] CMD: {cmd}")
 
     def get_status(self):
-        return {
-            "mode": self.mode,
-            "armed": self.armed,
-            "altitude": round(self.altitude, 2),
-            "last_command": self.last_command,
-            "position_x": round(self.position_x, 2),
-        }
+        if self.simulation:
+            return {
+                "mode": self._sim_mode,
+                "armed": self._sim_armed,
+                "altitude": round(self._sim_altitude, 2),
+                "last_command": self.last_command,
+                "position_x": round(self._sim_position_x, 2),
+                "simulation": True,
+                "connected": False,
+                "battery": "N/A",
+                "gps": "N/A",
+            }
+        try:
+            return {
+                "mode": str(self.vehicle.mode.name),
+                "armed": self.vehicle.armed,
+                "altitude": round(self.vehicle.location.global_relative_frame.alt, 2),
+                "last_command": self.last_command,
+                "position_x": 0.0,
+                "simulation": False,
+                "connected": True,
+                "battery": f"{self.vehicle.battery.voltage:.1f}V" if self.vehicle.battery.voltage else "N/A",
+                "gps": f"{self.vehicle.gps_0.fix_type} fix, {self.vehicle.gps_0.satellites_visible} sats",
+            }
+        except Exception as e:
+            return {
+                "mode": "ERROR",
+                "armed": False,
+                "altitude": 0.0,
+                "last_command": self.last_command,
+                "position_x": 0.0,
+                "simulation": False,
+                "connected": False,
+                "battery": "N/A",
+                "gps": "N/A",
+            }
 
 drone = DroneController()
 
@@ -629,7 +768,14 @@ def status():
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}",
         "fps": fps_state.get(active_mode, 0),
         "detections": thermal_detector.detections if active_mode == "thermal" else regular_detector.detections if active_mode == "regular" else 0,
+        "simulation": drone.simulation,
+        "pixhawk_connected": drone.connected,
     })
+
+@app.route("/arm_takeoff")
+def arm_takeoff():
+    threading.Thread(target=drone.arm_and_takeoff, args=(1.5,), daemon=True).start()
+    return jsonify({"ok": True})
 
 @app.route("/takeoff")
 def takeoff():
@@ -755,6 +901,7 @@ header{
 
 <header>
   <div class="logo">CAPS<span>DRONE</span></div>
+  <div id="sim-badge" class="badge sim" style="font-family:'Share Tech Mono',monospace;font-size:11px;padding:3px 10px;border-radius:2px;border:1px solid var(--orange);color:var(--orange)">CHECKING...</div>
   <div class="header-right">
     <div class="sys-info">
       <div>PYTHON <b id="py-ver">--</b> &nbsp;|&nbsp; FPS <b id="hdr-fps">--</b> &nbsp;|&nbsp; DETECT <b id="hdr-det">--</b></div>
@@ -843,6 +990,10 @@ header{
       </div>
       <div class="drone-stat" style="margin-top:8px"><div class="ds-label">LAST COMMAND</div><div class="ds-val blue" id="d-cmd">--</div></div>
       <div class="drone-stat" style="margin-top:8px"><div class="ds-label">POSITION X</div><div class="ds-val blue" id="d-x">--</div></div>
+      <div class="sgrid" style="margin-top:8px">
+        <div class="drone-stat"><div class="ds-label">BATTERY</div><div class="ds-val blue" id="d-bat">--</div></div>
+        <div class="drone-stat"><div class="ds-label">GPS</div><div class="ds-val blue" id="d-gps">--</div></div>
+      </div>
       <div class="alt-wrap">
         <div class="alt-lbl">ALT</div>
         <div class="alt-bg"><div class="alt-fill" id="alt-bar" style="height:15%"></div></div>
@@ -927,6 +1078,15 @@ setInterval(() => {
     document.getElementById('d-cmd').textContent = d.drone.last_command;
     document.getElementById('d-x').textContent = (d.drone.position_x||0).toFixed(1)+'m';
     document.getElementById('alt-bar').style.height = Math.min((d.drone.altitude/10)*100,100)+'%';
+    if(document.getElementById('d-bat')) document.getElementById('d-bat').textContent = d.drone.battery||'N/A';
+    if(document.getElementById('d-gps')) document.getElementById('d-gps').textContent = d.drone.gps||'N/A';
+    // Update sim/real badge in header
+    const simBadge = document.getElementById('sim-badge');
+    if(simBadge){
+      simBadge.textContent = d.simulation ? 'SIMULATION' : (d.pixhawk_connected ? 'PIXHAWK OK' : 'PIXHAWK ERR');
+      simBadge.style.color = d.simulation ? 'var(--orange)' : (d.pixhawk_connected ? 'var(--green)' : 'var(--red)');
+      simBadge.style.borderColor = d.simulation ? 'var(--orange)' : (d.pixhawk_connected ? 'var(--green)' : 'var(--red)');
+    }
 
     // Gesture availability
     gestureAvailable = d.gesture_available;
